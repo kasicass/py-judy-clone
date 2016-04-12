@@ -1,0 +1,16 @@
+Metadata-Version: 1.0
+Name: pyjudy
+Version: 1.0
+Summary: A python wrapper to the Judy sparse dynamic array library
+Home-page: http://www.dalkescientific.com/Python/PyJudy.html
+Author: Andrew Dalke
+Author-email: dalke@dalkescientific.com
+License: UNKNOWN
+Download-URL: http://www.dalkescientific.com/Python/pyjudy-1.0.tar.gz
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python
+Classifier: Topic :: Software Development :: Libraries :: Python Modules

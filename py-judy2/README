@@ -1,0 +1,583 @@
+                   PyJudy 1.0
+
+      A Python wrapper to the Judy sparse dynamic array library.
+        http://www.dalkescientific.com/Python/PyJudy.html
+
+Quoting from http://judy.sourceforge.net/ :
+
+    Judy is a C library that provides a state-of-the-art core
+    technology that implements a sparse dynamic array. Judy arrays are
+    declared simply with a null pointer. A Judy array consumes memory
+    only when it is populated, yet can grow to take advantage of all
+    available memory if desired.
+
+    Judy's key benefits are scalability, high performance, and memory
+    efficiency. A Judy array is extensible and can scale up to a very
+    large number of elements, bounded only by machine memory. Since
+    Judy is designed as an unbounded array, the size of a Judy array
+    is not pre-allocated but grows and shrinks dynamically with the
+    array population.
+
+PyJudy arrays are similar to Python dictionaries and sets.  The
+primary difference is that PyJudy keys are sorted; by unsigned value
+if an integer, byte ordering if a string and object id if a Python
+object.  In addition to wrapping the underlying Judy functions, PyJudy
+implements a subset of the Python dictionary interface for the JudyL
+and JudySL API and a subset of the set interface for the Judy1 API,
+along with some extensions for iterating a subrange of the sorted
+keys, values and items.
+
+  == INSTALLATION ==
+
+To install this package using the standard distutils package do:
+
+1) install Judy from http://judy.sourceforge.net/
+
+2) configure setup.py to use the installed Judy.  By default setup.py
+looks for Judy under /usr/local .
+
+3) Build and install PyJudy using Python's standard distutils
+
+       python setup.py install
+
+4) Run the regression test 'test_all.py' in this directory
+
+       python ./test_all.py
+
+The last two lines should be
+
+  All methods tested.
+  All tests passed.  Amazing.
+
+
+I have tested this with Python 2.3 and Python 2.4 on an Apple Mac
+PowerBook G4 and with Python 2.4 on a Intel-based FreeBSD machine.  In
+both cases I used Judy compiled for 32 bits.  Please let me know if
+you get it to work on a 64 bit machine.
+
+
+  == EXAMPLE ==
+
+Get information about the lines in a file.  This program is available
+from "examples/lineinfo.py" from the distribution.
+
+
+============================================================
+import pyjudy
+
+# Get a file to analyze
+import inspect
+filename = inspect.__file__
+if filename.endswith(".pyc"):
+    filename = filename[:-1]
+
+
+# Count the number of keys in a JudySL array
+# which start with the given text.
+def count_startswith(arr, word):
+    # Turns "def " into ("def ", "def!")
+    # Turns "class " into ("class ", "class!")
+    #   because "!" is the character after " ".
+    c = chr(ord(word[-1])+1)
+
+    # JudySL arrays don't support Count so have to
+    # do this manually.
+    it = arr.iterkeys_range(word, word[:-1] + c)
+    n = 0
+    for x in it:
+        n += 1
+    return n
+
+# Load the file
+j1arr = pyjudy.JudySLObj()
+for line in open(filename):
+    j1arr[line] = j1arr.get(line, 0) + 1
+
+print "Analyzing", repr(filename)
+print "There are", len(j1arr), "unique lines"
+print j1arr.get("\n", 0), "of them are newlines"
+print "In sorted order the first line is", repr(j1arr.First()[0])
+print " ... and the last is", repr(j1arr.Last()[0])
+    
+print count_startswith(j1arr, "def "),
+print "lines start with a 'def' statement"
+print count_startswith(j1arr, "class "),
+print "lines start with a 'class' definition"
+
+============================================================
+
+When I run the above on my machine I get the following output:
+
+
+Analyzing '/System/Library/Frameworks/Python.framework/Versions/2.3/lib/python2.3/inspect.py'
+There are 632 unique lines
+111 of them are newlines
+In sorted order the first line is '\n'
+ ... and the last is 'modulesbyfile = {}\n'
+43 lines start with a 'def' statement
+3 lines start with a 'class' definition
+
+
+
+
+
+          PyJudy 1.0 supports the following subset of the Judy API
+
+
+           === === === === === === JudyL === === === === === ===
+
+JudyL arrays map machine words to machine words.  In practice the words
+store unsigned integers or pointers.  PyJudy supports all four
+mappings as distinct classes.
+
+     pyjudy.JudyLIntInt - map unsigned integer keys to unsigned integer values
+     pyjudy.JudyLIntObj - map unsigned integer keys to Python object values
+     pyjudy.JudyLObjInt - map Python object keys to unsigned integer values
+     pyjudy.JudyLObjObj - map Python object keys to Python object values
+
+Unlike Python dictionaries, keys in JudyL arrays are ordered, with
+comparisons as unsigned longs.  Python does not have an unsigned
+integer type so normal integers are bitwise converted into signed
+integers.  This means the integer keys ordering is 0, 1, 2, ... -3,
+-2, -1.  0 is the smallest value and -1 is the largest.
+
+The unsigned long value used for a Python object is its id, which at
+the implementation level is a PyObject *.  Two objects are equal only
+if they have the same id.  This is different than a Python dictionary
+where two object are equal if they have the same hash and pass the
+test for "==".  The distinction is important because there is no
+guarantee that a duplicate string or number will reuse an existing
+object.  In the following the number "1000" creates a new object each
+time, so there are two entries in the JudyLObjObj instead of the one
+you might have expected.
+
+>>> import pyjudy
+>>> arr = pyjudy.JudyLObjObj()
+>>> arr[1000] = "Andrew"
+>>> arr[1000] = "Dalke"
+>>> len(arr)
+2
+>>> 
+
+As an implementation optimization in the current version of Python the
+numbers -5 through 100 (inclusive) will always return the same object
+as will strings of length one.  This may cause confusion unless you
+are careful.
+
+
+The PyJudyL classses implement methods corresponding to the functions at
+  http://judy.sourceforge.net/doc/JudyL_3x.htm
+
+These are:
+  arr.Ins(key, value) -- add a given key/value to the array.
+  arr.Del(key)        -- delete a key from the array.  Return True if
+          the key was present, otherwise return False.
+  arr.Get(key)        -- get the value associated with the key.  If not
+          present raise an IndexError
+
+  arr.Count()         -- number of elements in the array
+  arr.Count_from(key) -- number of elements in the array from the given
+                           key to the end
+  arr.Count_to()      -- number of elements in the array from the beginning
+                           to the given key, excluding the given key
+  arr.Count_range(start, end) -- number of elements between the start and
+                           end keys, excluding the end.
+
+  arr.ByCount(nth)  -- the Nth key/value pair, as a 2-element tuple.  Raises
+               IndexError if no matches.  ByCount(1) returns the first element.
+
+  arr.FreeArray()  -- remove all elements from the array
+  arr.MemUsed()    -- report the amount of memory used by the array
+
+  arr.First()   -- the first key/value pair, as a 2-element tuple.  Raises
+               StopIteration if no matches.
+  arr.First(key) -- the first key/value pair at or after the given key, as
+               a 2-element tuple.  Raises StopIteration if no matches.
+  arr.Next(key)    -- the next key/value pair after the given key, as
+               a 2-element tuple, Raises StopIteration if no matches.
+
+  arr.Last()   -- the last key/value pair, as a 2-element tuple.  Raises
+               StopIteration if no matches.
+  arr.Last(key) -- the first key/value pair at or before the given key, as
+               a 2-element tuple.  Raises StopIteration if no matches.
+  arr.Prev(key)    -- the previous key/value pair before the given key, as
+               a 2-element tuple, Raises StopIteration if no matches.
+
+  arr.FirstEmpty()
+  arr.FirstEmpty(key)
+  arr.NextEmpty(key)
+  arr.LastEmpty()
+  arr.LastEmpty(key)
+  arr.PrevEmpty(key) -- Similar to the First/Next/Last/Prev methods except
+      they return information about unassigned keys.  These return the
+      possible key as an unsigned integer.  (Not a 2-element tuple because
+      there is no value.)
+
+The JudyL array maps pretty closely to a Python dictionary.  At times
+it may be more appropriate to use a JudyL* array than a Python
+dictionary, especially if you want sorted keys.  PyJudy implements the
+following methods of the dictionary protocol:
+
+  len(arr)
+  arr.clear()
+  arr[key]
+  arr[key] = value
+  del arr[key]
+  key in arr
+  arr.get(key, failobj = None)
+
+  arr.keys()
+  arr.values()
+  arr.items()
+  arr.iterkeys()
+  arr.itervalues()
+  arr.iteritems()
+  iter(arr)
+
+  arr.__reversed__()    -- for 'reversed()' in Python 2.4
+
+
+All of the object iterations (keys(), values(), iteritems(),
+iter(arr), etc.)  return the objects in key order, from smallest to
+largest.
+
+PyJudy introduces the following variations for iterating over a
+portion of the array:
+
+  arr.iterkeys_from(key)  -- iterate from the first key at or after
+            the given key until the end of the array
+  arr.iterkeys_to(key)  -- iterate from the first key up to but not
+            including the given key
+  arr.iterkeys_range(start, end) -- iterate from the first key at or
+            after the start key up to but not including the end key.
+
+  arr.itervalues_from
+  arr.itervalues_to
+  arr.itervalues_range
+  arr.iteritems_from
+  arr.iteritems_to
+  arr.iteritems_range -- corresponding "values" and "items" iterations
+      
+  arr.iterempty
+  arr.iterempty_from
+  arr.iterempty_to
+  arr.iterempty_range -- corresponding iteration for empty keys (as
+                            unsigned integers)
+
+PyJudy also introduces the following variations for reverse iteration
+over a portion of the array:
+
+  arr.riterkeys_from(key) -- iterate from the first key at or before
+          the given key until the beginning of the array
+  arr.riterkeys_to(key)  -- iterate from the end down to but not
+          including the given key
+  arr.riterkeys_range(start, end) -- iterate from the first key at or
+          below the start key down to but not including the end key.
+
+  arr.ritervalues_from
+  arr.ritervalues_to
+  arr.ritervalues_range
+  arr.riteritems_from
+  arr.riteritems_to
+  arr.riteritems_range -- corresponding "values" and "items"
+                             reverse iterations
+      
+  arr.riterempty
+  arr.riterempty_from
+  arr.riterempty_to
+  arr.riterempty_range -- corresponding reverse iteration for empty
+                            keys (as unsigned integers)
+
+
+Yes, it did get rather boring to write all of these and their tests.
+
+By the way, here's one way to write an ordered iterator in Python.
+
+    def iterkeys_filtered_by_value(arr, value_filter = lambda x: x > 100):
+        k, v = arr.First()
+        while 1:
+            if value_filter(v):
+                yield k
+            k, v = arr.Next(k)
+
+
+The Judy documentation suggests a memory efficient way to have a JudyL
+array as a value in another JudyL array.  That technique uses
+low-order bitmasks to distinguish between pointers to JudyL and and
+non-JudyL structure.  PyJudy does not support that technique.  With
+some memory inefficiency you could just use a Python object instead.
+
+
+         === === === === === === JudySL === === === === === ===
+
+JudySL arrays map strings (C-style NUL terminated character strings)
+to machine words.  PyJudy supports JudySL arrays with integer and
+Python object as values.
+
+     pyjudy.JudySLInt - map string to unsigned integer values
+     pyjudy.JudySLObj - map string to Python object values
+
+The strings are stored in order by character code.  The smallest
+string is "" followed by all strings starting with chr(1) then all
+strings starting with chr(2), etc.  The largest string contains only
+chr(255) characters.  The underlying JudySL library supports unlimited
+strings lengths but for ease of implementation the PyJudy interface
+has a maximum string size of 100,000 bytes, defined in
+"pyjudy_common.h" and accessible as pyjudy.MAX_STRING_LEN.  If you
+need a larger but still bounded limit you can change the #define
+statement.  With some straight-forward work you could also write code
+to use a dynamically sized buffer.  I didn't need the complication.
+
+Python strings may contain NUL characters.  PyJudy checks each string
+and raises a TypeError if that happens.
+
+The PyJudySL classses implement methods corresponding to the functions at
+  http://judy.sourceforge.net/doc/JudySL_3x.htm
+
+These are:
+  arr.Ins(key, value)
+  arr.Del(key)
+  arr.Get(key)
+  arr.FreeArray()
+  arr.First()
+  arr.First(key)
+  arr.Next(key)
+  arr.Last()
+  arr.Last(key)
+  arr.Prev(key)
+
+The details are identical to the JudyL* classes above.  Note that the
+Count*(), ByCount() and MemUsed() methods are not available in a
+JudySL array and nor are the *Empty() methods.
+
+The JudySL array also maps pretty closely to a Python dictionary.  The
+biggest problem is the lack of a Count() method.  As a work-around
+PyJudy tracks all of the successful insertions and deletions itself,
+at the cost of an extra lookup when setting a key/value pair where the
+value is an integer.
+
+To more closely emulate a Python dictionary the PyJudy wrapper
+implements the following methods as you would expect them to do:
+
+  len(arr)
+  arr.clear()
+  arr[key]
+  arr[key] = value
+  del arr[key]
+  key in arr
+  arr.get(key, failobj = None)
+
+  arr.keys()
+  arr.values()
+  arr.items()
+  arr.iterkeys()
+  arr.itervalues()
+  arr.iteritems()
+  iter(arr)
+
+  arr.__reversed__()    -- for 'reversed()' in Python 2.4
+
+As with the JudyL* classes, the JudySL* classes also implement the
+alternate iteration methods.
+
+  arr.iterkeys_from(key)
+  arr.iterkeys_to(key)
+  arr.iterkeys_range(key)
+  arr.itervalues_from(key)
+  arr.itervalues_to(key)
+  arr.itervalues_range(key)
+  arr.iteritems_from(key)
+  arr.iteritems_to(key)
+  arr.iteritems_range(key)
+
+  arr.riterkeys_from(key)
+  arr.riterkeys_to(key)
+  arr.riterkeys_range(key)
+  arr.ritervalues_from(key)
+  arr.ritervalues_to(key)
+  arr.ritervalues_range(key)
+  arr.riteritems_from(key)
+  arr.riteritems_to(key)
+  arr.riteritems_range(key)
+
+For ease of implementation each iterator includes a 100,000 byte
+buffer used to keep the current index into the array.  Ideally this
+would be dynamically resized to just barely hold the largest value in
+the array, which is likely much less than 100,000 characters.
+
+
+          === === === === === === Judy1 === === === === === ===
+
+Judy1 arrays map machine words to boolean values.  PyJudy supports
+Judy1 arrays using integers and Python objects as keys.
+
+     pyjudy.Judy1Int - map integer keys to boolean values
+     pyjudy.Judy1Obj - map Python object keys to boolean values
+
+The PyJudy1 classses implement methods corresponding to the functions at
+  http://judy.sourceforge.net/doc/Judy1_3x.htm
+
+These are:
+  arr.Set(key)    -- map the key to True
+  arr.Unset(key)  -- map the key to False
+  arr.Test(key)   -- return the key's boolean value as either True or False
+
+as well as the by-now familiar methods (see the above JudyL documentation):
+  arr.Count(key)
+  arr.Count_from(key)
+  arr.Count_to(key)
+  arr.Count_range(start, end)
+
+  arr.ByCount(nth)
+
+  arr.FreeArray()
+  arr.MemUsed()
+
+  arr.First()
+  arr.First(key)
+  arr.Next(key)
+  arr.Last()
+  arr.Last(key)
+  arr.Prev(key)
+
+  arr.FirstEmpty()
+  arr.FirstEmpty(key)
+  arr.NextEmpty(key)
+  arr.LastEmpty()
+  arr.LastEmpty(key)
+  arr.PrevEmpty(key)
+
+A Judy1 maps more closely to a Python set than a Python dictionary so
+the PyJudy interface implements the following subset of the standard
+set protocol.
+
+  len(arr)
+  iter(arr)
+  key in arr
+  arr.add(key)
+  arr.remove(key)
+  arr.clear()
+
+Unlike Python sets, the Judy1 keys are ordered.  The PyJudy1* classes
+implement the iterator and reverse iterator for both keys and empty
+keys.  It does not support iteration of values and items because all
+the non-empty values would be True and the empty ones would be false.
+The implemented methods are:
+
+  arr.keys()
+  arr.iterkeys()
+  arr.iterkeys_to(key)
+  arr.iterkeys_from(key)
+  arr.iterkeys_range(start, end)
+  arr.riterkeys()
+  arr.riterkeys_to(key)
+  arr.riterkeys_from(key)
+  arr.riterkeys_range(start, end)
+
+  arr.iterempty()
+  arr.iterempty_to(key)
+  arr.iterempty_from(key)
+  arr.iterempty_range(start, end)
+  arr.riterempty()
+  arr.riterempty_to(key)
+  arr.riterempty_from(key)
+  arr.riterempty_range(start, end)
+
+ === === === === === === === === === === === === === === === ===
+
+
+ == PERFORMANCE ==
+
+I have done some performance comparisons using the "timings.py"
+program found in the examples subdirectory of the distribution.  The
+results from my 1GHz Mac PowerBook G4 using 1,000,000 random numbers
+are shown here, formatted slightly for better display.
+
+
+ *** JudyL timings ***
+                                 ------- :    dict  JudyLIntInt  JudyLIntObj  JudyLObjObj
+                    time to load mapping :  1.7334      1.7144      1.8449      1.3231
+      time to verify subset1 in all_data :  0.4399      0.4036      0.4031      0.3077
+                           time to clear :  0.3433      0.2390      0.7375      0.3592
+              __contains__ with all hits :  2.9185      3.0687      3.1686      2.7474
+                       number of unique= :  906475      906475      906475      999998
+       index lookup (all elements exist) :  0.8573      1.0305      0.9815      0.5734
+                                    iter :  0.3835      0.4105      0.4104      0.4129
+                              itervalues :  0.1572      0.4141      0.3677      0.3865
+                               iteritems :  0.4865      0.6084      0.5688      0.5431
+           __contains__ with few matches :  0.5119      0.4180      0.4063      0.3042
+                              % matches= :  0.0951      0.0951      0.0951      0.0000
+                                  delete :  0.7797      1.5358      1.6373      0.7591
+
+ *** Judy1 timings ***
+                                 ------- :     set    Judy1Int    Judy1Obj
+                        time to load set :  2.5798      1.3992      1.3318
+      time to verify subset1 in all_data :  0.4551      0.3163      0.2504
+                           time to clear :  0.2957      0.0142      0.3356
+    verify none of all_data in empty set :  0.4882      0.4033      0.3912
+check for overlaps (sparse __contains__) :  0.6842      0.5082      0.4313
+                      number of overlaps :   47557       47557           1
+            delete subset1 from all_data :  1.0457      1.0985      0.9252
+
+
+The first conclusion is that Python dictionaries are wicked fast.
+There are few cases where PyJudy is faster, though perhaps there might
+be a few more if I knew more about the Python extension API.  Bear in
+mind though that the Judy arrays are in sorted order and the JudyL*
+classes have ways to access elements by order.
+
+The second is that Judy1 arrays are faster than Python's set data
+type.  The above uses the C implementation from the CVS build of
+Python 2.5a0 (built March 19; I should CVS update).  The Python
+version in 2.3 is about 10 times slower.
+
+
+ == BUGS AND KNOWN PROBLEMS ==
+
+There are no known bugs in PyJudy 1.0.
+
+The iterator type names are not detailed enough to know exactly which
+container they come from.
+
+The keys in the JudySL{Int,Obj} classes have a wrapper-defined
+hard-limit of 100,000 characters.  This is a compile-time constant.
+Contributes for using a dynamic buffer gladly accepted.
+
+There are some inefficiencies because the Judy data structures don't
+exactly map to Python dictionaries or sets.  For example, JudySL
+arrays don't have a Count function, which is needed for the Python
+dictionary protocol.  The PyJudySL{Int,Obj} wrappers therefore
+manually track all insertions and deletions.  But there's no way for a
+JudySLInt to know if an added string key created a new entry or
+replaced an old one.  Instead the current implementation first checks
+to see if the entry exists before doing a delete.  This entails a
+double lookup.
+
+For better performance integer keys and values must be exactly
+Python's integer type.  The "__int__" method and subclassing are not
+supported.
+
+PyJudy does not check for Judy errors.  Given that the wrapper handles
+the interface correctly the only time that will be a problem is if you
+run out of memory.
+
+PyJudy does not implement the JudyHS array.  I have no need for them.
+Contributions gladly accepted.
+
+PyJudy does not implement the full Python protocols for dictionaries
+or sets.  Contributions gladly accepted.
+
+I don't know how much of the API needs to be exposed for C
+programmers.
+
+This is the first time I've delved into Python's extension API for
+dictionary-like objects.  I likely missed some nuances that can make
+for better performance and extensibility.  For example, should I use
+the METH_COEXIST added in Python 2.4?
+
+  == LEGAL ==
+
+This program and its documentation is copyright (c) 2005 by Dalke
+Scientific Software, a limited liabiliy company registered in New
+Mexico, USA.  It is released under the MIT license.  For details see
+the file LICENSE in the distribution.
