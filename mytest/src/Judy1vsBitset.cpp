@@ -3,6 +3,8 @@
 //
 // when MAX_COUNT = 10000000, bitset fails to init.
 // use stack for memory?
+
+//#define JUDYERROR_NOTEST 1
 #include <Judy.h>
 #include <bitset>
 #include "TickClock.hpp"
