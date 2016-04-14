@@ -35,12 +35,12 @@ deps = ["pyjudy1_code_template.c",
         "template.py",
         ]
 
-#pyjudy_mtime = mtime("pyjudy.c")
-#for dep_filename in deps:
-#    if mtime(dep_filename) < pyjudy_mtime:
-#        import pyjudy_gen
-#        pyjudy_gen.main()
-#        break
+pyjudy_mtime = mtime("pyjudy.c")
+for dep_filename in deps:
+    if mtime(dep_filename) > pyjudy_mtime:
+        import pyjudy_gen
+        pyjudy_gen.main()
+        break
 
 setup(name = "pyjudy", version = "1.0",
       author = "Andrew Dalke",
