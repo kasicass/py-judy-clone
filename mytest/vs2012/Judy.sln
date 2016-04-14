@@ -5,6 +5,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "simple", "simple.vcxproj", 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Judy1vsBitset", "Judy1vsBitset.vcxproj", "{2619A24C-8D2C-4BCB-B7CE-90A10F5CB183}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "JudyL_test", "JudyL_test.vcxproj", "{81546611-3C0E-457B-B235-90178BEA1370}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -19,6 +21,10 @@ Global
 		{2619A24C-8D2C-4BCB-B7CE-90A10F5CB183}.Debug|Win32.Build.0 = Debug|Win32
 		{2619A24C-8D2C-4BCB-B7CE-90A10F5CB183}.Release|Win32.ActiveCfg = Release|Win32
 		{2619A24C-8D2C-4BCB-B7CE-90A10F5CB183}.Release|Win32.Build.0 = Release|Win32
+		{81546611-3C0E-457B-B235-90178BEA1370}.Debug|Win32.ActiveCfg = Debug|Win32
+		{81546611-3C0E-457B-B235-90178BEA1370}.Debug|Win32.Build.0 = Debug|Win32
+		{81546611-3C0E-457B-B235-90178BEA1370}.Release|Win32.ActiveCfg = Release|Win32
+		{81546611-3C0E-457B-B235-90178BEA1370}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
