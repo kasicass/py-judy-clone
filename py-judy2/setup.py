@@ -2,7 +2,8 @@ import os, re, sys
 from distutils.core import setup, Extension
 
 
-JUDY_BASE_DIR = "/usr/local"
+#JUDY_BASE_DIR = "/usr/local"
+JUDY_BASE_DIR = "Judy"
 JUDY_LIB_DIR = os.path.join(JUDY_BASE_DIR, "lib")
 JUDY_INC_DIR = os.path.join(JUDY_BASE_DIR, "include")
 
@@ -34,12 +35,12 @@ deps = ["pyjudy1_code_template.c",
         "template.py",
         ]
 
-pyjudy_mtime = mtime("pyjudy.c")
-for dep_filename in deps:
-    if mtime(dep_filename) < pyjudy_mtime:
-        import pyjudy_gen
-        pyjudy_gen.main()
-        break
+#pyjudy_mtime = mtime("pyjudy.c")
+#for dep_filename in deps:
+#    if mtime(dep_filename) < pyjudy_mtime:
+#        import pyjudy_gen
+#        pyjudy_gen.main()
+#        break
 
 setup(name = "pyjudy", version = "1.0",
       author = "Andrew Dalke",
@@ -59,6 +60,7 @@ setup(name = "pyjudy", version = "1.0",
          ["pyjudy.c"],
          include_dirs = [JUDY_INC_DIR],
          library_dirs = [JUDY_LIB_DIR],
-         libraries = ["Judy"],
+         libraries = ["Judy", "python27"],
+         extra_compile_args = ['/DJU_WIN', '/DPy_NO_ENABLE_SHARED'],
          )]
 )
